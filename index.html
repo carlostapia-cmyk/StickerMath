@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Generador de Stickers Matemáticos</title>
+
+<link rel="manifest" href="manifest.json">
+
+<link rel="stylesheet"
+href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+
+<script defer
+src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+<script
+src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js">
+</script>
+
+
+<style>
+
+body{
+
+    font-family:Segoe UI,Tahoma,sans-serif;
+    background:#f0f2f5;
+    display:flex;
+    justify-content:center;
+    padding:30px;
+
+}
+
+
+.container{
+
+    width:700px;
+    background:white;
+    border-radius:15px;
+    padding:25px;
+    box-shadow:0 5px 15px rgba(0,0,0,.15);
+
+}
+
+
+h2{
+
+    text-align:center;
+
+}
+
+
+input{
+
+    width:100%;
+    padding:12px;
+    font-size:18px;
+    box-sizing:border-box;
+
+}
+
+
+#preview-box{
+
+    margin-top:20px;
+    border:2px dashed #bbb;
+    border-radius:10px;
+    min-height:150px;
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    background:white;
+
+}
+
+
+#math-output{
+
+    padding:0;
+    margin:0;
+    background:transparent;
+    color:black;
+
+}
+
+
+button{
+
+    margin-top:20px;
+
+    width:100%;
+
+    padding:15px;
+
+    font-size:18px;
+
+    border:none;
+
+    border-radius:8px;
+
+    cursor:pointer;
+
+    background:#25D366;
+
+    color:white;
+
+}
+
+
+button:hover{
+
+    background:#128C7E;
+
+}
+
+
+
+#result-preview{
+
+    display:none;
+
+    margin-top:25px;
+
+    text-align:center;
+
+}
+
+
+
+#final-sticker-img{
+
+    max-width:280px;
+
+    border:1px solid #ddd;
+
+}
+
+
+
+canvas{
+
+    display:none;
+
+}
+
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+
+<h2>
+Generador de Stickers Matemáticos
+</h2>
+
+
+<p>
+Escribe una fórmula en LaTeX.
+</p>
+
+
+
+<input
+
+id="latex-input"
+
+type="text"
+
+placeholder="\int_0^1 x^2\,dx"
+
+value="\int_0^1 x^2\,dx=\frac13">
+
+
+<div id="preview-box">
+
+<div id="math-output"></div>
+
+</div>
+
+
+
+<button id="btnGenerar">
+
+Generar Sticker PNG
+
+</button>
+
+<button id="btnCompartir" style="display:none; background:#128C7E;">
+
+Compartir Sticker
+
+</button>
+
+
+<div id="result-preview">
+
+
+<h3>
+Vista previa
+</h3>
+
+
+<img id="final-sticker-img">
+
+
+<p>
+Haz clic derecho sobre la imagen y selecciona
+<b>Guardar imagen como...</b>
+</p>
+
+
+</div>
+
+
+</div>
+
+
+
+<canvas
+
+id="sticker-canvas"
+
+width="512"
+
+height="512">
+
+</canvas>
+
+<script>
+
+const input = document.getElementById("latex-input");
+const output = document.getElementById("math-output");
+
+const canvas = document.getElementById("sticker-canvas");
+const ctx = canvas.getContext("2d");
+
+const boton = document.getElementById("btnGenerar");
+const botonCompartir = document.getElementById("btnCompartir");
+
+const resultado = document.getElementById("result-preview");
+const imagen = document.getElementById("final-sticker-img");
+let archivoSticker = null;
+
+
+function renderizar(){
+
+    try{
+
+        katex.render(
+            input.value,
+            output,
+            {
+                displayMode:true,
+                throwOnError:false
+            }
+        );
+
+        output.style.color="black";
+        output.style.background="transparent";
+
+    }
+
+    catch(e){
+
+        output.innerHTML="<b>Error en la fórmula.</b>";
+
+    }
+
+}
+
+
+
+input.addEventListener("input",renderizar);
+
+window.onload=renderizar;
+
+
+
+async function generarSticker(){
+
+
+    renderizar();
+
+
+    const captura = await html2canvas(output,{
+
+        backgroundColor:null,
+
+        scale:3,
+
+        useCORS:true,
+
+        logging:false
+
+    });
+
+
+
+    // Crear canvas temporal
+
+    const tempCanvas=document.createElement("canvas");
+
+    tempCanvas.width=captura.width;
+
+    tempCanvas.height=captura.height;
+
+
+    const tctx=tempCanvas.getContext("2d");
+
+
+    tctx.drawImage(captura,0,0);
+
+
+
+    // Detectar zona visible
+
+    const img=tctx.getImageData(
+
+        0,
+
+        0,
+
+        tempCanvas.width,
+
+        tempCanvas.height
+
+    );
+
+
+    const data=img.data;
+
+
+    let minX=tempCanvas.width;
+    let minY=tempCanvas.height;
+    let maxX=0;
+    let maxY=0;
+
+
+
+    for(let y=0;y<tempCanvas.height;y++){
+
+        for(let x=0;x<tempCanvas.width;x++){
+
+
+            const alpha=data[
+                (y*tempCanvas.width+x)*4+3
+            ];
+
+
+            if(alpha>5){
+
+
+                if(x<minX) minX=x;
+
+                if(x>maxX) maxX=x;
+
+                if(y<minY) minY=y;
+
+                if(y>maxY) maxY=y;
+
+
+            }
+
+        }
+
+    }
+
+
+
+    // Margen alrededor de la fórmula
+
+    const borde=15;
+
+
+    minX=Math.max(0,minX-borde);
+
+    minY=Math.max(0,minY-borde);
+
+
+    maxX=Math.min(
+        tempCanvas.width-1,
+        maxX+borde
+    );
+
+
+    maxY=Math.min(
+        tempCanvas.height-1,
+        maxY+borde
+    );
+
+
+
+    const w=maxX-minX;
+
+    const h=maxY-minY;
+
+
+
+    // Restaurar canvas cuadrado
+
+    // Crear imagen final recortada automáticamente
+
+const margenFinal = 30;
+
+
+const stickerCanvas = document.createElement("canvas");
+
+stickerCanvas.width = w + 2*margenFinal;
+
+stickerCanvas.height = h + 2*margenFinal;
+
+
+const stickerCtx = stickerCanvas.getContext("2d");
+
+
+// Fondo transparente
+
+stickerCtx.clearRect(
+    0,
+    0,
+    stickerCanvas.width,
+    stickerCanvas.height
+);
+
+
+// Dibujar solamente la fórmula
+
+stickerCtx.drawImage(
+
+    tempCanvas,
+
+    minX,
+
+    minY,
+
+    w,
+
+    h,
+
+    margenFinal,
+
+    margenFinal,
+
+    w,
+
+    h
+
+);
+
+
+const png = stickerCanvas.toDataURL("image/png");
+
+imagen.src = png;
+
+resultado.style.display="block";
+
+
+// Crear archivo para compartir
+const blob = await new Promise(resolve => 
+    stickerCanvas.toBlob(resolve, "image/png")
+);
+
+archivoSticker = new File(
+    [blob],
+    "sticker-matematico.png",
+    {
+        type:"image/png"
+    }
+);
+
+
+botonCompartir.style.display="block";
+
+
+}
+
+
+
+// Botón generar
+
+async function compartirSticker(){
+
+    if(!archivoSticker){
+
+        alert("Primero genera un sticker");
+
+        return;
+
+    }
+
+
+    if(navigator.canShare &&
+       navigator.canShare({files:[archivoSticker]})){
+
+
+        await navigator.share({
+
+            files:[archivoSticker],
+
+            title:"Sticker matemático"
+
+        });
+
+
+    }else{
+
+        alert("Tu dispositivo no permite compartir archivos");
+
+    }
+
+}
+
+boton.addEventListener(
+    "click",
+    generarSticker
+);
+
+botonCompartir.addEventListener(
+    "click",
+    compartirSticker
+);
+
+
+// Activar PWA
+
+if("serviceWorker" in navigator){
+
+    navigator.serviceWorker.register("sw.js");
+
+}
+
+
+</script>
+
+
+</body>
+
+</html>
