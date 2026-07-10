@@ -466,7 +466,7 @@ resultado.style.display="block";
 
 // Crear archivo para compartir
 const blob = await new Promise(resolve => 
-    stickerCanvas.toBlob(resolve, "image/png")
+   stickerCanvas.toBlob(resolve, "image/webp", 0.95)
 );
 
 archivoSticker = new File(
